@@ -1,0 +1,10 @@
+# Mac.
+.DS_STORE
+
+# Node.
+node_modules
+dist
+npm-debug.log
+yarn.lock
+package-lock.json
+yarn-error.log
