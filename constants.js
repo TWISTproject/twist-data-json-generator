@@ -30,7 +30,7 @@ module.exports = Object.freeze({
     TWIST_MINING_AMOUNT: 0.01,
 
     // block enterval (seconds)
-    BLOCK_SEARCH_INTERVAL: 40,
+    BLOCK_SEARCH_INTERVAL: 5,
 
     // debug mode
     DEBUG: false,

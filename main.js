@@ -610,8 +610,6 @@ function idIsValidFormat(id, checkUnique, idSet) {
 
 async function monitorNewBlocks() {
     while (monitorBlocks) {
-        // wait for x seconds
-        await snooze(constants.BLOCK_SEARCH_INTERVAL * 1000);
         var block;
         try {
             block = await client.getBlockCount();
@@ -625,5 +623,7 @@ async function monitorNewBlocks() {
             // search for TWIST ID info
             await scanForTwistIdInfo();
         }
+        // wait for x seconds
+        await snooze(constants.BLOCK_SEARCH_INTERVAL * 1000);
     }
 }
