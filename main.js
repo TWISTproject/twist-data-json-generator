@@ -6,7 +6,6 @@ const os = require('os');
 const jsonfile = require('jsonfile');
 const crypto = require('crypto');
 const base58 = require('./base58Tools');
-const base64 = require('./base64Tools');
 const constants = require('./constants');
 const utils = require('./utils');
 
