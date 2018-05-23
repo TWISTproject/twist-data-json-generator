@@ -6,7 +6,12 @@
   "license": "MIT",
   "main": "main.js",
   "scripts": {
-    "start": "node main.js"
+    "start": "concurrently --kill-others \"npm run start-solo\" \"npm run start-api\"",
+    "start-solo": "node main.js",
+    "start-api": "node server.js"
+  },
+  "devDependencies": {
+    "concurrently": "^3.5.1"
   },
   "dependencies": {
     "bitcoin-core": "^2.0.0",
