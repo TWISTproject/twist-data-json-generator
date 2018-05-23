@@ -204,7 +204,7 @@ function finishConfCheck() {
 }
 
 async function scanForTwistIdInfo() {
-    var debug = false;
+    var debug = constants.DEBUG;
 
     // twist id reg
     var twistIdRegistrations = [];

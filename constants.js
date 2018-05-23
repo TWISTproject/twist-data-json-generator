@@ -32,6 +32,9 @@ module.exports = Object.freeze({
     // block enterval (seconds)
     BLOCK_SEARCH_INTERVAL: 40,
 
+    // debug mode
+    DEBUG: false,
+
     // rpc
     DEFAULT_RPC_PORT: '17473',
 });
