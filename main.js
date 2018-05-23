@@ -232,53 +232,58 @@ async function scanForTwistIdInfo() {
     }
     
     // read from json
-    if(constants.READ_DATA_FROM_JSON) {
-        var filePath = utils.getTwistIdFilePath();
-        var dataSource = await jsonfile.readFileSync(filePath);
-        console.log("reading json data from " + filePath);
-        // retrieve existing data from json file if possible
-        if(dataSource != null && Object.keys(dataSource).length != 0) {
-            // check last scanned block is valid
-            if (!isNaN(dataSource.block) && dataSource.block <= endBlock) {
-                startBlock = dataSource.block;
-                if (debug) console.log('storage retrieved: block');
-            }
-            // check registrations is in the correct format
-            if (Array.isArray(dataSource.registrations)) {
-                twistIdRegistrations = dataSource.registrations;
-                if (debug) console.log('storage retrieved: registrations');
-            }
-            // check registrants is in the correct format
-            if (Array.isArray(dataSource.registrantArray)) {
-                registrantSet = new Set(dataSource.registrantArray);
-                if (debug) console.log('storage retrieved: registrantArray');
-            }
-            // check ids are in the correct format
-            if (Array.isArray(dataSource.idArray)) {
-                idSet = new Set(dataSource.idArray);
-                if (debug) console.log('storage retrieved: idArray');
-            }
-            // check pubkeys are in the correct format
-            if (Array.isArray(dataSource.pubKeyArray)) {
-                pubKeySet = new Set(dataSource.pubKeyArray);
-                if (debug) console.log('storage retrieved: pubKeyArray');
-            }
-            // check valid twist ids are in the correct format
-            if (Array.isArray(dataSource.validTwistIds)) {
-                validTwistIds = dataSource.validTwistIds;
-                if (debug) console.log('storage retrieved: validTwistIds');
-            }
-            // check twist id tx's are in the correct format
-            if (Array.isArray(dataSource.twistIdTxs)) {
-                twistIdTxs = dataSource.twistIdTxs;
-                if (debug) console.log('storage retrieved: twistIdTxs');
-            }
-            // check twist id txId's are in the correct format
-            if (Array.isArray(dataSource.twistIdTxTxIdsArray)) {
-                twistIdTxTxIds = new Set(dataSource.twistIdTxTxIdsArray);
-                if (debug) console.log('storage retrieved: twistIdTxTxIdsArray');
+    try {
+        if(constants.READ_DATA_FROM_JSON) {
+            var filePath = utils.getTwistIdFilePath();
+            var dataSource = await jsonfile.readFileSync(filePath);
+            console.log("reading json data from " + filePath);
+            // retrieve existing data from json file if possible
+            if(dataSource != null && Object.keys(dataSource).length != 0) {
+                // check last scanned block is valid
+                if (!isNaN(dataSource.block) && dataSource.block <= endBlock) {
+                    startBlock = dataSource.block;
+                    if (debug) console.log('storage retrieved: block');
+                }
+                // check registrations is in the correct format
+                if (Array.isArray(dataSource.registrations)) {
+                    twistIdRegistrations = dataSource.registrations;
+                    if (debug) console.log('storage retrieved: registrations');
+                }
+                // check registrants is in the correct format
+                if (Array.isArray(dataSource.registrantArray)) {
+                    registrantSet = new Set(dataSource.registrantArray);
+                    if (debug) console.log('storage retrieved: registrantArray');
+                }
+                // check ids are in the correct format
+                if (Array.isArray(dataSource.idArray)) {
+                    idSet = new Set(dataSource.idArray);
+                    if (debug) console.log('storage retrieved: idArray');
+                }
+                // check pubkeys are in the correct format
+                if (Array.isArray(dataSource.pubKeyArray)) {
+                    pubKeySet = new Set(dataSource.pubKeyArray);
+                    if (debug) console.log('storage retrieved: pubKeyArray');
+                }
+                // check valid twist ids are in the correct format
+                if (Array.isArray(dataSource.validTwistIds)) {
+                    validTwistIds = dataSource.validTwistIds;
+                    if (debug) console.log('storage retrieved: validTwistIds');
+                }
+                // check twist id tx's are in the correct format
+                if (Array.isArray(dataSource.twistIdTxs)) {
+                    twistIdTxs = dataSource.twistIdTxs;
+                    if (debug) console.log('storage retrieved: twistIdTxs');
+                }
+                // check twist id txId's are in the correct format
+                if (Array.isArray(dataSource.twistIdTxTxIdsArray)) {
+                    twistIdTxTxIds = new Set(dataSource.twistIdTxTxIdsArray);
+                    if (debug) console.log('storage retrieved: twistIdTxTxIdsArray');
+                }
             }
         }
+    } catch (err) {
+        console.log('cannot read from json file');
+        console.log('starting scan from block ' + startBlock);
     }
 
     scannedBlocks = startBlock;
