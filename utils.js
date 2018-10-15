@@ -53,3 +53,8 @@ exports.getTwistIdFilePath = function () {
   var constants = require('./constants');
   return this.getTwistDataDirectoryPath() + '\\' + constants.FILE_NAME_TWIST_ID;
 }
+
+exports.getTwistDataFilePath = function () {
+  var constants = require('./constants');
+  return this.getTwistDataDirectoryPath() + '\\' + constants.FILE_NAME_TWIST_DATA;
+}

@@ -2,6 +2,7 @@ module.exports = Object.freeze({
     TOOLBOX_VERSION: '0.9.1',
 
     FILE_NAME_TWIST_ID: "twist-id.json",
+    FILE_NAME_TWIST_DATA: "twist-data.json",
     READ_DATA_FROM_JSON: true,
 
     // twist id
@@ -11,6 +12,19 @@ module.exports = Object.freeze({
     TWIST_ID_MIN_LENGTH: 3,
     TWIST_ID_MAX_LENGTH: 18,
     TWIST_ID_SCAN_START_BLOCK: 130000,
+
+    // twist data
+    TWIST_DATA_PRIVATE_ADDRESS: '18gxKt6wyRZoNXwx9moo8LCeVdxSh6rotB',
+    TWIST_DATA_SHAREABLE_ADDRESS: '18gxKt6wyRZoNXwxA27QB7JaPWAJX558sr',
+    TWIST_DATA_DELIMITER_ADDRESS: '18gxKt6wyRZoNXwx8mbFC8qVsmwnqNfkuU',
+    TWIST_DATA_ID_LENGTH: 8,
+    TWIST_DATA_VALIDATION_STRING_LENGTH: 8,
+    TWIST_DATA_SHAREABLE_KEY_LENGTH: 10,
+    TWIST_DATA_BASELINE_FEE: 10,
+    TWIST_DATA_MAX_CHARS: 2500,
+    TWIST_DATA_FEE_STEP: 1,
+    TWIST_DATA_FEE_STEP_CHARS: 20,
+    TWIST_DATA_SCAN_START_BLOCK: 643880,
 
     // twist keys (since they are encoded as base64, we use $ char (which isn't base64))
     TWIST_KEY_PUBLIC_LENGTH_B64: 66,

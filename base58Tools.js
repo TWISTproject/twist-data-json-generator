@@ -85,6 +85,77 @@ exports.extractPayloadsFromTwistIdRegBurnAddresses = function (burnAddresses) {
     'privKey': privKeyFinal
   };
 }
+/*
+tx structure:
+(optional) change address
+flag address (private or shareable)
+encryption address
+(sharable only) keystore addresses
+initial payload
+delimiting address
+primary payload
+
+(passwords) - no delimiting address or primary payload addresses
+*/
+exports.extractPayloadsFromTwistDataTxAddresses = function (addresses, type) {
+  var x = 0;
+  // encryption address is always the first address
+  var encryptionAddress = base64.stripNonBase64Chars(this.getAddressPayload(addresses[x]));
+  x = 1;
+  var nextKeyFinal = "";
+  if(type == 'shareable') {
+    // 15 keystore addresses
+    var nextKey = "";
+    for (x = 1; x < 16; x++) {
+      if(x < addresses.length) {
+        nextKey += this.getAddressPayload(addresses[x]);
+      }
+      else {
+        // invalid tx
+        nextKey = "";
+        break;
+      }
+    }
+    nextKeyFinal = base64.decode(base64.stripNonBase64Chars(nextKey));
+  }
+
+  // rest of the addresses until delimiting contain initial payload
+  var initialPayload = "";
+  while(x < addresses.length) {
+    if(addresses[x] == constants.TWIST_DATA_DELIMITER_ADDRESS) {
+      // reached delimiting address so break
+      x++;
+      break;
+    }
+    // haven't reached delimiting address yet
+    initialPayload += this.getAddressPayload(addresses[x]);
+    x++;
+  }
+  var initialPayloadFinal = base64.decode(base64.stripNonBase64Chars(initialPayload));
+  
+  // if there's still addresses left to scan we can obtain the final payload
+  var finalPayload = "";
+  while(x < addresses.length) {
+    finalPayload += this.getAddressPayload(addresses[x]);
+    x++;
+  }
+  var finalPayloadFinal = base64.decode(base64.stripNonBase64Chars(finalPayload));
+
+  // create obj
+  var dataTxObj = {};
+  dataTxObj.owner = encryptionAddress;
+  dataTxObj.type = type;
+  dataTxObj.initialPayload = initialPayloadFinal;
+  dataTxObj.hasFinalPayload = false;
+  if(finalPayloadFinal.length > 0) {
+    dataTxObj.hasFinalPayload = true;
+  }
+  dataTxObj.finalPayload = finalPayloadFinal;
+  if(type == 'shareable') {
+    dataTxObj.shareableKey = nextKeyFinal;
+  }
+  return dataTxObj;
+}
 
 exports.extractPayloadsFromTwistIdTxAddresses = function (addresses) {
   // sender id is always the first address

@@ -53,7 +53,7 @@ init();
 
 async function setupRpcClient() {
     console.log('establishing rpc connection with credentials', confCredentials);
-    client = new Client({
+     client = new Client({
         'username': confCredentials.rpcuser,
         'password': confCredentials.rpcpassword,
         'port': confCredentials.rpcport
@@ -204,6 +204,7 @@ function finishConfCheck() {
 
 async function scanForTwistIdInfo() {
     var debug = constants.DEBUG;
+	debug = true;
 
     // twist id reg
     var twistIdRegistrations = [];
@@ -624,10 +625,235 @@ async function monitorNewBlocks() {
             lastSeenBlock = block;
             // send data to renderer
             console.log("new block found", lastSeenBlock);
-            // search for TWIST ID info
+            // search for TWIST ID/DATA info
             await scanForTwistIdInfo();
+            await scanForTwistDataInfo();
         }
         // wait for x seconds
         await snooze(constants.BLOCK_SEARCH_INTERVAL * 1000);
     }
+}
+
+async function scanForTwistDataInfo() {
+    var debug = constants.DEBUG;
+	debug = true;
+
+    // twist data
+    var validTwistData = [];
+    var ownerSet = new Set();
+    var twistDataTxTxIds = new Set();
+
+    var scannedBlocks = 1;
+    var startBlock = constants.TWIST_DATA_SCAN_START_BLOCK;
+    var endBlock;
+    try {
+        endBlock = await client.getBlockCount();
+    } catch (err) {
+        return;
+    }
+
+    // read from json
+    try {
+        if(constants.READ_DATA_FROM_JSON) {
+            var filePath = utils.getTwistDataFilePath();
+            var dataSource = await jsonfile.readFileSync(filePath);
+            console.log("reading json data from " + filePath);
+            // retrieve existing data from json file if possible
+            if(dataSource != null && Object.keys(dataSource).length != 0) {
+                // check last scanned block is valid
+                if (!isNaN(dataSource.block) && dataSource.block <= endBlock) {
+                    startBlock = dataSource.block;
+                    if (debug) console.log('storage retrieved: block');
+                }
+                // check valid twist data tx's are in the correct format
+                if (Array.isArray(dataSource.validTwistData)) {
+                    validTwistData = dataSource.validTwistData;
+                    if (debug) console.log('storage retrieved: validTwistData');
+                }
+                // check twist data owners are in the correct format
+                if (Array.isArray(dataSource.ownerSet)) {
+                    ownerSet = new Set(dataSource.ownerSet);
+                    if (debug) console.log('storage retrieved: ownerSet');
+                }
+                // check twist data txId's are in the correct format
+                if (Array.isArray(dataSource.twistDataTxTxIds)) {
+                    twistDataTxTxIds = new Set(dataSource.twistDataTxTxIds);
+                    if (debug) console.log('storage retrieved: twistDataTxTxIds');
+                }
+            }
+        }
+    } catch (err) {
+        console.log('cannot read from json file');
+        console.log('starting scan from block ' + startBlock);
+    }
+
+    scannedBlocks = startBlock;
+
+    // scan transactions in each block
+    for (var i = startBlock; i <= endBlock; i++) {
+        if (debug) console.log('block: ' + i);
+        var blockHash;
+        var block;
+        try {
+            blockHash = await client.getBlockHash(i);
+            block = await client.getBlock(blockHash);
+        } catch (err) {
+            return;
+        }
+        var blockTime = block.time;
+        for (var j = 0; j < block.tx.length; j++) {
+            var txId = block.tx[j];
+            var res = null;
+            var err = null;
+            var altTx = null;
+            var tx = null;
+            altTx = await client.getTransaction(txId).catch((result, error) => {
+                res = result.text;
+                err = error;
+            });
+            if (altTx == null && (res == null || err != null)) {
+                continue;
+            }
+            if (altTx != null) {
+                tx = altTx;
+            } else {
+                tx = JSON.parse(res).result;
+            }
+            if (debug) console.log('tx');
+            var vin = tx.vin;
+            var vout = tx.vout;
+
+            // only transactions that can be relevant are inspected
+            // twist data transactions always have at least 10 vouts
+            if (vout != null && vout.length >= 10) {
+                if (debug) console.log('vout');
+
+                // twist data tx
+                var twistDataDetected = false;
+                var twistDataTxFlagAddr = '';
+                var twistDataTxAddrVal = [];
+
+                for (var k = 0; k < vout.length; k++) {
+                    if (vout[k]['scriptPubKey']['type'] === 'nonstandard') {
+                        break;
+                    }
+                    var addr = vout[k]['scriptPubKey']['addresses'][0];
+                    var val = vout[k]['value'];
+
+                    // twist id tx
+                    if (twistDataDetected) {
+                        twistDataTxAddrVal.push({
+                            'address': addr,
+                            'amount': val
+                        });
+                    } else {
+                        if (addr === constants.TWIST_DATA_PRIVATE_ADDRESS || addr === constants.TWIST_DATA_SHAREABLE_ADDRESS) {
+                            twistDataTxFlagAddr = addr;
+                            var fee = constants.TWIST_DATA_BASELINE_FEE;
+
+                            // check they have paid the fee
+                            if (val >= (0.90 * fee)) {
+                                twistDataDetected = true;
+                                k = -1; // start from the beginning (so we can log addresses)
+                            }
+                        }
+                    }
+                }
+                
+                // twist id tx
+                if (twistDataDetected) {
+                    if (debug) console.log('twist data tx detected');
+                    if (debug) console.log("twistDataTxAddrVal: ", twistDataTxAddrVal);
+                    
+                    // list of all addresses
+                    var approxPaid = 0;
+                    var txAddresses = twistDataTxAddrVal.map(a => a.address);
+                    // find index of twist data flag address
+                    if (txAddresses[0] === twistDataTxFlagAddr) {
+                        // remove first address (flag)
+                        txAddresses.shift();
+
+                        approxPaid = twistDataTxAddrVal[0].amount;
+                        for(var u = 1; u < twistDataTxAddrVal.length; u++) {
+                            approxPaid += twistDataTxAddrVal[u].amount;
+                        }
+                    } else if (txAddresses[1] === twistDataTxFlagAddr) {
+                        // remove first 2 addresses (change and flag)
+                        txAddresses.shift();
+                        txAddresses.shift();
+
+                        approxPaid = twistDataTxAddrVal[1].amount;
+                        for(var u = 2; u < twistDataTxAddrVal.length; u++) {
+                            approxPaid += twistDataTxAddrVal[u].amount;
+                        }
+                    } else {
+                        // invalid tx
+                        continue;
+                    }
+
+                    // tx type
+                    var dataTxType = 'private';
+                    if (twistDataTxFlagAddr === constants.TWIST_DATA_SHAREABLE_ADDRESS) {
+                        dataTxType = 'shareable';
+                    }
+
+                    // extract info from remaining addresses to create twist data tx obj
+                    var twistDataTxObj = base58.extractPayloadsFromTwistDataTxAddresses(txAddresses, dataTxType);
+                    twistDataTxObj.fee = approxPaid;
+                    twistDataTxObj.block = i;
+                    twistDataTxObj.blockTime = blockTime;
+                    twistDataTxObj.txId = txId;
+                    twistDataTxObj.shortTxId = crypto.createHash('sha256').update(txId).digest('hex').substring(0, 8);
+
+                    // validation checks
+                    if( twistDataTxObj.owner.length != 20 ||
+                        twistDataTxObj.initialPayload.length < 5) {
+                            console.log("[Block " + twistDataTxObj.block + "] twist data tx validation failed for tx: " + txId);
+                            continue;
+                    }
+
+                    // add to sets
+                    if (!twistDataTxTxIds.has(twistDataTxObj.txId)) {
+                        twistDataTxTxIds.add(twistDataTxObj.txId);
+                        ownerSet.add(twistDataTxObj.owner);
+                        validTwistData.push(twistDataTxObj);
+                    }
+                }
+            }
+        }
+        scannedBlocks = i;
+        // notify renderer of progress
+        // only display 1 in 5000 blocks (for performance reasons)
+        var display = false;
+        if (scannedBlocks % 5000 === 0) {
+            display = true;
+        } else if (scannedBlocks == endBlock) {
+            display = true;
+        }
+
+        if (display) {
+            console.log('blocks-processed', {
+                'current': scannedBlocks,
+                'total': endBlock
+            });
+        }
+    }
+    if (debug) console.log('finished indexing twist data transactions');
+
+    // save twist data info
+    var twistDataInfoObj = {
+        'block': scannedBlocks,
+        'validTwistData': validTwistData,
+        'twistDataTxTxIds': Array.from(twistDataTxTxIds),
+        'ownerSet': Array.from(ownerSet),
+    };
+    
+    // write to json
+    var filePath = utils.getTwistDataFilePath();
+    console.log('writing twist data info to json file', filePath);
+    await jsonfile.writeFile(filePath, twistDataInfoObj, function (err) {
+        if (err) {
+            console.error(err);
+        }
+    });
 }
